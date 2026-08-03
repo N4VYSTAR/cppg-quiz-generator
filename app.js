@@ -12,7 +12,14 @@ function initApp(data) {
   const todayIds = todayArticles.map(a => a.id);
 
   renderArticles(todayArticles);
-  renderCards(data.cards.filter(c => todayIds.includes(c.articleId)));
+  
+	// ✅ 변경 (랜덤으로 3개만)
+	const todayCards = data.cards
+	  .filter(c => todayIds.includes(c.articleId))  // 오늘 조문 관련 카드만
+	  .sort(() => Math.random() - 0.5)              // 랜덤 섞기
+	  .slice(0, 3);                                 // 3개만 자르기
+
+	renderCards(todayCards);
 
   // "새 문제 만들기" 버튼 → AI가 오늘 조문으로 새 문제 생성 후 갱신
   document.getElementById('genBtn').addEventListener('click', () => {
