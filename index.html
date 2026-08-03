@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CPPG 매일 학습</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📚 CPPG 매일 학습</h1>
+      <div class="streak">🔥 연속 <span id="streakCount">0</span>일</div>
+    </header>
+
+    <!-- 오늘의 조문 -->
+    <section class="card-box">
+      <h2>📖 오늘의 조문</h2>
+      <div id="articles"></div>
+    </section>
+
+    <!-- 기출문제 -->
+    <section class="card-box">
+      <h2>✏️ 기출문제</h2>
+      <div id="questions"></div>
+    </section>
+	
+	<!-- AI 문제 생성 -->
+	<section class="card-box">
+	  <h2>🤖 문제 생성</h2>
+	  <button id="genBtn" class="complete-btn">새 문제 만들기 🎲</button>
+	  <div id="aiQuestions" style="margin-top: 12px;"></div>
+	</section>
+
+    <!-- 암기 카드 -->
+    <section class="card-box">
+      <h2>🃏 암기 카드 (눌러서 뒤집기)</h2>
+      <div id="flashcards"></div>
+    </section>
+	
+    <button id="completeBtn" class="complete-btn">오늘 학습 완료! ✅</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
