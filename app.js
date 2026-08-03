@@ -7,22 +7,23 @@ fetch('data.json')
   .then(data => initApp(data));
 
 function initApp(data) {
-	// initApp 함수 안에 추가
-	document.getElementById('genBtn').addEventListener('click', () => {
-		const a = todayArticles[0]; // 오늘의 첫 조문
-		generateQuestion(a.title, a.content);
-	});
-	
-	// 오늘의 조문 랜덤 2개 뽑기
-	const shuffled = [...data.articles].sort(() => Math.random() - 0.5);
-	const todayArticles = shuffled.slice(0, 2);
-	const todayIds = todayArticles.map(a => a.id);
+  const shuffled = [...data.articles].sort(() => Math.random() - 0.5);
+  const todayArticles = shuffled.slice(0, 2);
+  const todayIds = todayArticles.map(a => a.id);
 
-	renderArticles(todayArticles);
-	renderCards(data.cards.filter(c => todayIds.includes(c.articleId)));
-	renderQuestions(data.questions.filter(q => todayIds.includes(q.articleId)));
+  renderArticles(todayArticles);
+  renderCards(data.cards.filter(c => todayIds.includes(c.articleId)));
 
-	setupStreak();
+  // 처음엔 기존 기출문제를 통합 퀴즈에 표시
+  renderQuiz(data.questions.filter(q => todayIds.includes(q.articleId)));
+
+  // "새 문제 만들기" 버튼 → AI가 오늘 조문으로 새 문제 생성 후 갱신
+  document.getElementById('genBtn').addEventListener('click', () => {
+    const a = todayArticles[0];
+    generateQuestion(a.title, a.content);
+  });
+
+  setupStreak();
 }
 
 // 조문 표시
@@ -51,39 +52,6 @@ function renderCards(cards) {
       const flipped = card.dataset.flipped === 'true';
       card.textContent = flipped ? card.dataset.front : card.dataset.back;
       card.dataset.flipped = flipped ? 'false' : 'true';
-    });
-  });
-}
-
-// 기출문제 표시
-function renderQuestions(questions) {
-  const box = document.getElementById('questions');
-  box.innerHTML = questions.map((q, qi) => `
-    <div class="question-item">
-      <div class="q-text">Q${qi + 1}. ${q.question}</div>
-      ${q.options.map((opt, oi) => `
-        <button class="option" data-q="${qi}" data-o="${oi}">${oi + 1}. ${opt}</button>
-      `).join('')}
-      <div class="explanation" id="exp-${qi}">${q.explanation}</div>
-    </div>
-  `).join('');
-
-  box.querySelectorAll('.option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const qi = btn.dataset.q, oi = parseInt(btn.dataset.o);
-      const correct = questions[qi].answer;
-      // 이미 푼 문제면 무시
-      const parent = btn.closest('.question-item');
-      if (parent.dataset.done === 'true') return;
-      parent.dataset.done = 'true';
-
-      if (oi === correct) {
-        btn.classList.add('correct');
-      } else {
-        btn.classList.add('wrong');
-        parent.querySelectorAll('.option')[correct].classList.add('correct');
-      }
-      document.getElementById('exp-' + qi).style.display = 'block';
     });
   });
 }
@@ -119,11 +87,12 @@ function setupStreak() {
 }
 
 // ===== AI 문제 생성 기능 (Level 2) =====
-
-// "새 문제 생성" 버튼에 연결할 함수
 async function generateQuestion(articleTitle, articleContent) {
-  const container = document.getElementById('aiQuestions');
-  container.innerHTML = '<p>🤖 AI가 문제를 만드는 중... (몇 초 걸려요)</p>';
+  const box = document.getElementById('quiz');
+  const btn = document.getElementById('genBtn');
+
+  box.innerHTML = '<p>🤖 AI가 문제를 만드는 중... (몇 초 걸려요)</p>';
+  btn.disabled = true; // 중복 클릭 방지
 
   try {
     const res = await fetch('/api/generate', {
@@ -135,30 +104,38 @@ async function generateQuestion(articleTitle, articleContent) {
     if (!res.ok) throw new Error('서버 오류');
 
     const data = await res.json();
-    renderAIQuestions(data.questions);
+    renderQuiz(data.questions); // 통합 렌더 함수 재사용
 
   } catch (err) {
-    container.innerHTML = '<p>⚠️ 생성 실패. 잠시 후 다시 시도해주세요.</p>';
+    box.innerHTML = '<p>⚠️ 생성 실패. 잠시 후 다시 시도해주세요.</p>';
     console.error(err);
+  } finally {
+    btn.disabled = false;
   }
 }
 
-// AI 생성 문제 화면에 표시
-function renderAIQuestions(questions) {
-  const box = document.getElementById('aiQuestions');
+// ===== 통합 퀴즈 렌더링 =====
+function renderQuiz(questions) {
+  const box = document.getElementById('quiz');
+
+  if (!questions || questions.length === 0) {
+    box.innerHTML = '<p>새 문제 만들기를 눌러보세요</p>';
+    return;
+  }
+
   box.innerHTML = questions.map((q, qi) => `
     <div class="question-item">
-      <div class="q-text">🤖 ${q.question}</div>
+      <div class="q-text">Q${qi + 1}. ${q.question}</div>
       ${q.options.map((opt, oi) => `
-        <button class="option" data-aq="${qi}" data-o="${oi}">${oi + 1}. ${opt}</button>
+        <button class="option" data-q="${qi}" data-o="${oi}">${oi + 1}. ${opt}</button>
       `).join('')}
-      <div class="explanation" id="aiexp-${qi}">${q.explanation}</div>
+      <div class="explanation" id="exp-${qi}">${q.explanation}</div>
     </div>
   `).join('');
 
   box.querySelectorAll('.option').forEach(btn => {
     btn.addEventListener('click', () => {
-      const qi = btn.dataset.aq, oi = parseInt(btn.dataset.o);
+      const qi = btn.dataset.q, oi = parseInt(btn.dataset.o);
       const correct = questions[qi].answer;
       const parent = btn.closest('.question-item');
       if (parent.dataset.done === 'true') return;
@@ -170,7 +147,7 @@ function renderAIQuestions(questions) {
         btn.classList.add('wrong');
         parent.querySelectorAll('.option')[correct].classList.add('correct');
       }
-      document.getElementById('aiexp-' + qi).style.display = 'block';
+      document.getElementById('exp-' + qi).style.display = 'block';
     });
   });
 }
