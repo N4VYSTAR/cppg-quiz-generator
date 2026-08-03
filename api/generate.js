@@ -28,15 +28,15 @@ try {
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`,
     {
-        method: 'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: 'application/json',
-        thinkingConfig: {
-          thinkingBudget: 0  // thinking 끄기 (속도 ↑, 토큰 절약)
-        },
+        //thinkingConfig: {
+        //  thinkingBudget: 0  // thinking 끄기 (속도 ↑, 토큰 절약)
+        //},
         responseSchema: {
           type: 'ARRAY',
           items: {
