@@ -26,32 +26,34 @@ export default async function handler(req, res) {
 try {
     const apiKey = process.env.GEMINI_API_KEY; // 환경변수에서 키 읽기
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`,
     {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            // JSON 모드: AI가 정해진 형식으로만 응답 → 파싱 오류 방지
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  question: { type: 'STRING' },
-                  options: { type: 'ARRAY', items: { type: 'STRING' } },
-                  answer: { type: 'INTEGER' },
-                  explanation: { type: 'STRING' }
-                },
-                required: ['question', 'options', 'answer', 'explanation']
-              }
-            }
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        thinkingConfig: {
+          thinkingBudget: 0  // thinking 끄기 (속도 ↑, 토큰 절약)
+        },
+        responseSchema: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              question: { type: 'STRING' },
+              options: { type: 'ARRAY', items: { type: 'STRING' } },
+              answer: { type: 'INTEGER' },
+              explanation: { type: 'STRING' }
+            },
+            required: ['question', 'options', 'answer', 'explanation']
           }
-        })
+        }
       }
-    );
+    })
+  }
+);
 	
 	// api/generate.js 의 catch 처리 개선
 	if (!response.ok) {
