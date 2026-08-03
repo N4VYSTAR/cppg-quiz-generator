@@ -26,8 +26,6 @@ function initApp(data) {
     const a = todayArticles[0];
     generateQuestion(a.title, a.content);
   });
-
-  setupStreak();
 }
 
 // 조문 표시
@@ -57,36 +55,6 @@ function renderCards(cards) {
       card.textContent = flipped ? card.dataset.front : card.dataset.back;
       card.dataset.flipped = flipped ? 'false' : 'true';
     });
-  });
-}
-
-// 스트릭(연속 학습) 기능
-function setupStreak() {
-  const streakEl = document.getElementById('streakCount');
-  const btn = document.getElementById('completeBtn');
-
-  let streak = parseInt(localStorage.getItem('streak') || '0');
-  const lastDate = localStorage.getItem('lastDate');
-  streakEl.textContent = streak;
-
-  // 오늘 이미 완료했는지 확인
-  if (lastDate === today) {
-    btn.textContent = '오늘 학습 완료됨 ✅';
-    btn.classList.add('done');
-  }
-
-  btn.addEventListener('click', () => {
-    if (localStorage.getItem('lastDate') === today) return;
-
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    // 어제 했으면 이어서, 아니면 1부터
-    streak = (lastDate === yesterday) ? streak + 1 : 1;
-
-    localStorage.setItem('streak', streak);
-    localStorage.setItem('lastDate', today);
-    streakEl.textContent = streak;
-    btn.textContent = '오늘 학습 완료됨 ✅';
-    btn.classList.add('done');
   });
 }
 
