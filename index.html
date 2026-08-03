@@ -10,7 +10,6 @@
   <div class="container">
     <header>
       <h1>📚 CPPG 매일 학습</h1>
-      <div class="streak">🔥 연속 <span id="streakCount">0</span>일</div>
     </header>
 
     <!-- 오늘의 조문 -->
@@ -19,10 +18,14 @@
       <div id="articles"></div>
     </section>
 
-	<!-- 통합 퀴즈 -->
+	<!--  퀴즈 -->
 	<section class="card-box">
 	  <h2>✏️ 퀴즈</h2>
-	  <div id="quiz"></div>
+	  <div id="quiz">
+		<p style="color: #999; text-align: center; padding: 20px 0;">
+		  아래 버튼을 눌러 오늘의 조문으로 문제를 만들어보세요!
+		</p>
+	  </div>
 	  <button id="genBtn" class="complete-btn" style="margin-top: 12px;">
 		새 문제 만들기 🎲
 	  </button>

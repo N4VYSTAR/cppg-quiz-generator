@@ -14,9 +14,6 @@ function initApp(data) {
   renderArticles(todayArticles);
   renderCards(data.cards.filter(c => todayIds.includes(c.articleId)));
 
-  // 처음엔 기존 기출문제를 통합 퀴즈에 표시
-  renderQuiz(data.questions.filter(q => todayIds.includes(q.articleId)));
-
   // "새 문제 만들기" 버튼 → AI가 오늘 조문으로 새 문제 생성 후 갱신
   document.getElementById('genBtn').addEventListener('click', () => {
     const a = todayArticles[0];
