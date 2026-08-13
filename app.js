@@ -41,7 +41,7 @@ async function refreshArticles(useLive = true) {
     }
   }
   if (!articles.length) articles = state.data.articles;
-  state.todayArticles = sampleFreshArticles(articles, 2 + Math.floor(Math.random() * 2));
+  state.todayArticles = sampleFreshArticles(articles, Math.min(2, articles.length));
   renderArticles(state.todayArticles);
   state.completed.article = false;
   updateProgress();
@@ -52,7 +52,7 @@ async function refreshArticles(useLive = true) {
 function mergeWithLocal(liveArticles) {
   return liveArticles.map((article) => {
     const local = state.data.articles.find((item) => item.number === article.number || item.id === article.id);
-    return { ...local, ...article, summary: local?.summary || '현행 조문을 읽고 핵심 의무와 예외를 확인하세요.', tags: local?.tags || ['현행법령'], examWeight: local?.examWeight || 1 };
+    return { ...local, ...article, summary: local?.summary || '', tags: local?.tags || [], examWeight: local?.examWeight || 1, highlights: local?.highlights || [] };
   });
 }
 
@@ -91,7 +91,7 @@ function refreshCards() {
 
 function renderArticles(articles) {
   $('articleCount').textContent = `${articles.length}개`;
-  $('articles').innerHTML = articles.map((a) => `<article class="article-item"><div class="article-top"><div class="article-title">${escapeHtml(a.title)}</div>${a.importance >= 3 ? '<span class="importance">★ 시험 빈출</span>' : ''}</div><div class="article-content">${escapeHtml(a.content)}</div><div class="article-summary">한 줄 요약 · ${escapeHtml(a.summary || '핵심 의무와 예외를 확인하세요.')}</div><div class="tags">${(a.tags || []).slice(0, 5).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}</div></article>`).join('');
+  $('articles').innerHTML = articles.map((a) => `<article class="article-item"><div class="article-top"><div class="article-title">${escapeHtml(a.title)}</div>${a.importance >= 3 ? '<span class="importance">★ 시험 빈출</span>' : ''}</div><div class="article-content">${formatArticleContent(a)}</div><div class="article-summary"><strong>한 줄 요약</strong> · ${escapeHtml(a.summary || 'AI가 조문을 분석하는 중입니다.')}</div><div class="tags">${(a.tags?.length ? a.tags : ['현행법령']).slice(0, 5).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}</div></article>`).join('');
   $('articles').querySelectorAll('.article-item').forEach((item) => item.addEventListener('click', () => { state.completed.article = true; updateProgress(); }));
 }
 
@@ -99,11 +99,20 @@ function buildLocalQuestions() {
   const article = state.todayArticles[0] || {};
   const title = article.title || '오늘의 조문';
   const content = article.content || '조문 원문을 확인하세요.';
+  const correct = article.summary || content.split('\n')[0].slice(0, 100);
   return [
-    { question: `${title}의 내용으로 옳은 것은?`, options: [article.summary || content.slice(0, 80), '해당 조문은 모든 개인정보 처리를 예외 없이 허용한다.', '해당 조문은 정보주체의 권리와 무관하다.', '해당 조문에는 적용 요건이나 예외가 없다.'], answer: 0, explanation: `정답은 ${title}의 핵심 내용입니다. 원문: ${content}` },
-    { question: `${title}을(를) 적용할 때 가장 먼저 확인해야 할 사항은?`, options: ['조문이 정한 요건과 예외에 해당하는지 여부', '문제에 제시된 기관의 규모만', '개인정보의 처리 목적과 무관한 내부 관행', '조문 제목의 글자 수'], answer: 0, explanation: `${title}은(는) 문구 자체보다 적용 요건과 예외를 함께 확인해야 합니다.` },
-    { question: `다음 중 ${title}에 대한 설명으로 옳지 않은 것은?`, options: ['조문 원문에 없는 내용을 임의로 추가할 수 있다.', '조문의 보호 목적과 적용 범위를 확인해야 한다.', '구체적인 사실관계에 따라 예외 적용 여부가 달라질 수 있다.', '관련 조문과 함께 읽으면 출제 포인트를 파악하기 쉽다.'], answer: 0, explanation: '법 조문 기반 문제는 원문에 없는 내용을 정답 근거로 삼을 수 없습니다.' }
-  ].slice(0, 2 + Math.floor(Math.random() * 2));
+    { question: `${title}의 내용과 일치하는 것은?`, options: [correct, '조문이 정한 대상과 요건은 적용 판단에서 고려하지 않는다.', '조문의 적용 범위는 조문 제목만으로 확정된다.', '조문에 명시된 기준은 사실관계와 관계없이 변경된다.'], answer: 0, explanation: `정답은 ${title}의 원문과 요약에 근거합니다. ${content}` },
+    { question: `${title}에 관한 설명 중 옳지 않은 것은?`, options: ['조문의 적용 대상과 요건을 확인해야 한다.', '조문의 예외 또는 제한 요건도 함께 검토해야 한다.', '관련 항·호의 구체적 내용을 확인할 필요가 없다.', '사실관계가 달라지면 적용 결과가 달라질 수 있다.'], answer: 2, explanation: '조문은 항·호의 구체적 요건까지 확인해야 정확히 적용할 수 있습니다.' }
+  ];
+}
+
+function formatArticleContent(article) {
+  let html = escapeHtml(article.content || '');
+  (article.highlights || []).filter(Boolean).forEach((highlight) => {
+    const safe = escapeHtml(highlight);
+    html = html.split(safe).join(`<strong class="article-highlight">${safe}</strong>`);
+  });
+  return html.replace(/\n/g, '<br>');
 }
 
 function renderQuiz(questions) {

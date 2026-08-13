@@ -29,6 +29,18 @@ function children(value, keys) {
   return [];
 }
 
+function collectParagraphLines(value, lines = []) {
+  if (!value || typeof value !== 'object') return lines;
+  if (Array.isArray(value)) { value.forEach((item) => collectParagraphLines(item, lines)); return lines; }
+  for (const key of ['항내용', '호내용', '목내용']) {
+    if (value[key]) lines.push(clean(value[key]));
+  }
+  Object.entries(value).forEach(([key, child]) => {
+    if (!['항내용', '호내용', '목내용'].includes(key)) collectParagraphLines(child, lines);
+  });
+  return lines;
+}
+
 export function parseJsonArticles(payload, limit) {
   const nodes = payload?.법령?.조문?.조문단위 || payload?.법령?.조문단위 || [];
   const seen = new Set();
@@ -36,11 +48,8 @@ export function parseJsonArticles(payload, limit) {
     const number = clean(node?.['조문번호'] || `제${index + 1}조`);
     const title = clean(node?.['조문제목'] || '');
     const main = clean(node?.['조문내용'] || '');
-    const paragraphs = children(node, ['항', '항단위']).flatMap((item) => {
-      if (typeof item === 'string') return [clean(item)];
-      return [clean(item?.['항내용'] || item?.['내용'] || '')];
-    }).filter(Boolean);
-    const content = [main, ...paragraphs].filter(Boolean).join(' ');
+    const paragraphs = collectParagraphLines(node['항']);
+    const content = [main, ...paragraphs].filter(Boolean).join('\n');
     const key = `${number}|${content}`;
     if (!content || node?.['조문여부'] !== '조문' || seen.has(key)) return null;
     seen.add(key);
