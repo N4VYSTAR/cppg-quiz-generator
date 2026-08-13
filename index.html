@@ -1,43 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f766e" />
   <title>CPPG 매일 학습</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>📚 CPPG 매일 학습</h1>
+  <main class="container">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">CPPG DAILY · 5분 루틴</p>
+        <h1>오늘도 한 조문만큼 성장하기</h1>
+        <p class="hero-copy">현행 법령을 읽고, 문제를 풀고, 카드를 뒤집으면 오늘 학습이 끝나요.</p>
+      </div>
+      <div class="streak" aria-label="연속 학습일"><span id="streakCount">0</span><small>일 연속</small></div>
     </header>
 
-    <!-- 오늘의 조문 -->
-    <section class="card-box">
-      <h2>📖 오늘의 조문</h2>
-      <div id="articles"></div>
+    <section class="progress-panel" aria-label="오늘 학습 진행률">
+      <div class="progress-top"><strong id="progressLabel">오늘의 루틴 0%</strong><span id="syncStatus">샘플 데이터 준비 중</span></div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      <div class="routine"><span>① 조문 읽기</span><span>② 문제 풀기</span><span>③ 카드 뒤집기</span></div>
     </section>
 
-	<!--  퀴즈 -->
-	<section class="card-box">
-	  <h2>✏️ 퀴즈</h2>
-	  <div id="quiz">
-		<p style="color: #999; text-align: center; padding: 20px 0;">
-		  아래 버튼을 눌러 오늘의 조문으로 문제를 만들어보세요!
-		</p>
-	  </div>
-	  <button id="genBtn" class="complete-btn" style="margin-top: 12px;">
-		새 문제 만들기 🎲
-	  </button>
-	</section>
-
-    <!-- 암기 카드 -->
-    <section class="card-box">
-      <h2>🃏 암기 카드 (눌러서 뒤집기)</h2>
-      <div id="flashcards"></div>
+    <section class="card-box" id="articlesSection">
+      <div class="section-heading"><div><p class="section-kicker">STEP 1 · READ</p><h2>오늘의 조문 <span class="count-pill" id="articleCount">0개</span></h2></div><button class="refresh-btn" id="refreshArticles" type="button">새로고침</button></div>
+      <p class="section-help">시험 빈출 가능성이 높은 조문을 가볍게 읽어보세요. 별표는 중요도 분석 결과입니다.</p>
+      <div id="articles" class="stack"></div>
     </section>
-  </div>
 
+    <section class="card-box" id="quizSection">
+      <div class="section-heading"><div><p class="section-kicker">STEP 2 · PLAY</p><h2>관련 기출형 문제 <span class="count-pill" id="quizCount">2~3문제</span></h2></div><button class="refresh-btn" id="refreshQuiz" type="button">새 문제</button></div>
+      <p class="section-help">오늘의 조문을 바탕으로 CPPG 출제 패턴의 4지선다 문제를 만들어요.</p>
+      <div id="quiz" class="stack"><div class="empty-state">조문을 읽은 뒤 <b>새 문제</b>를 눌러보세요.</div></div>
+    </section>
+
+    <section class="card-box" id="cardsSection">
+      <div class="section-heading"><div><p class="section-kicker">STEP 3 · FLIP</p><h2>요약 & 암기 카드 <span class="count-pill" id="cardCount">0장</span></h2></div><button class="refresh-btn" id="refreshCards" type="button">새 카드</button></div>
+      <p class="section-help">카드를 눌러 정답을 확인하세요. 모르는 카드는 한 번 더 만나도록 기록됩니다.</p>
+      <div id="flashcards" class="card-grid"></div>
+    </section>
+
+    <footer><a href="https://www.law.go.kr/법령/개인정보보호법" target="_blank" rel="noreferrer">국가법령정보센터에서 원문 보기 ↗</a><span>학습 참고용 · 법률 자문 아님</span></footer>
+  </main>
   <script src="app.js"></script>
 </body>
 </html>
