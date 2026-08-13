@@ -41,7 +41,7 @@ async function refreshArticles(useLive = true) {
     }
   }
   if (!articles.length) articles = state.data.articles;
-  state.todayArticles = sampleFreshArticles(articles, Math.min(2, articles.length));
+  state.todayArticles = sampleFreshArticles(articles, Math.min(2, articles.length)).map((article) => ({ ...article, ...localArticleAnalysis(article) }));
   renderArticles(state.todayArticles);
   state.completed.article = false;
   updateProgress();
@@ -52,7 +52,7 @@ async function refreshArticles(useLive = true) {
 function mergeWithLocal(liveArticles) {
   return liveArticles.map((article) => {
     const local = state.data.articles.find((item) => item.number === article.number || item.id === article.id);
-    return { ...local, ...article, summary: local?.summary || '', tags: local?.tags || [], examWeight: local?.examWeight || 1, highlights: local?.highlights || [] };
+    return { ...local, ...article, summary: local?.summary || '', tags: local?.tags || [], examWeight: local?.examWeight || 1 };
   });
 }
 
@@ -63,10 +63,14 @@ async function analyzeImportance() {
   try {
     const result = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articles: state.todayArticles }) }).then(assertOk).then((r) => r.json());
     if (Array.isArray(result.articles)) {
-      state.todayArticles = state.todayArticles.map((item) => ({ ...item, ...result.articles.find((x) => String(x.id) === String(item.id)) }));
+      state.todayArticles = state.todayArticles.map((item) => mergeAnalysis(item, result.articles.find((x) => String(x.id) === String(item.id))));
       renderArticles(state.todayArticles);
     }
-  } catch (error) { console.info('중요도 AI 분석 fallback:', error.message); }
+  } catch (error) {
+    console.info('중요도 AI 분석 fallback:', error.message);
+    state.todayArticles = state.todayArticles.map((article) => ({ ...article, ...localArticleAnalysis(article) }));
+    renderArticles(state.todayArticles);
+  }
 }
 
 function refreshQuiz() {
@@ -91,7 +95,7 @@ function refreshCards() {
 
 function renderArticles(articles) {
   $('articleCount').textContent = `${articles.length}개`;
-  $('articles').innerHTML = articles.map((a) => `<article class="article-item"><div class="article-top"><div class="article-title">${escapeHtml(a.title)}</div>${a.importance >= 3 ? '<span class="importance">★ 시험 빈출</span>' : ''}</div><div class="article-content">${formatArticleContent(a)}</div><div class="article-summary"><strong>한 줄 요약</strong> · ${escapeHtml(a.summary || 'AI가 조문을 분석하는 중입니다.')}</div><div class="tags">${(a.tags?.length ? a.tags : ['현행법령']).slice(0, 5).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}</div></article>`).join('');
+  $('articles').innerHTML = articles.map((a) => `<article class="article-item"><div class="article-top"><div class="article-title">${escapeHtml(a.title)}</div>${a.importance >= 4 ? `<span class="importance" title="${escapeAttr(a.importanceReason || 'CPPG 출제 가능성 분석 결과')}">★ 시험 빈출 가능성 높음</span>` : ''}</div><div class="article-content">${formatArticleContent(a)}</div><div class="article-summary">한 줄 요약 · ${escapeHtml(cleanArticleText(a.summary || 'AI가 조문을 분석하는 중입니다.'))}</div><div class="tags">${(a.tags || []).filter((tag) => String(tag).trim() && String(tag).trim() !== '현행법령').slice(0, 5).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}</div></article>`).join('');
   $('articles').querySelectorAll('.article-item').forEach((item) => item.addEventListener('click', () => { state.completed.article = true; updateProgress(); }));
 }
 
@@ -99,20 +103,41 @@ function buildLocalQuestions() {
   const article = state.todayArticles[0] || {};
   const title = article.title || '오늘의 조문';
   const content = article.content || '조문 원문을 확인하세요.';
-  const correct = article.summary || content.split('\n')[0].slice(0, 100);
+  const correct = cleanArticleText(article.summary || content.split('\n').find((line) => line.trim()) || '조문의 핵심 요건을 확인한다.').slice(0, 120);
   return [
-    { question: `${title}의 내용과 일치하는 것은?`, options: [correct, '조문이 정한 대상과 요건은 적용 판단에서 고려하지 않는다.', '조문의 적용 범위는 조문 제목만으로 확정된다.', '조문에 명시된 기준은 사실관계와 관계없이 변경된다.'], answer: 0, explanation: `정답은 ${title}의 원문과 요약에 근거합니다. ${content}` },
-    { question: `${title}에 관한 설명 중 옳지 않은 것은?`, options: ['조문의 적용 대상과 요건을 확인해야 한다.', '조문의 예외 또는 제한 요건도 함께 검토해야 한다.', '관련 항·호의 구체적 내용을 확인할 필요가 없다.', '사실관계가 달라지면 적용 결과가 달라질 수 있다.'], answer: 2, explanation: '조문은 항·호의 구체적 요건까지 확인해야 정확히 적용할 수 있습니다.' }
+    { question: `${title}의 내용으로 가장 정확한 것은?`, options: [correct, '해당 요건은 적용 대상에 따라 별도로 검토할 필요가 없다.', '해당 요건은 일부 조건만 충족해도 같은 법적 효과가 발생한다.', '해당 요건은 사실관계보다 처리자의 내부 기준을 우선하여 판단한다.'], answer: 0, explanation: `정답은 제공된 조문 원문에 근거합니다. 핵심 내용은 ${correct}입니다.` },
+    { question: `${title}을(를) 적용할 때 가장 적절한 판단은?`, options: ['적용 대상과 조문에 정한 요건을 사실관계에 맞춰 함께 확인한다.', '적용 대상은 확인하되 조문에 정한 제한 요건은 별도로 확인하지 않는다.', '법적 근거는 확인하되 구체적인 처리 상황은 판단에서 제외한다.', '조문의 일반적인 취지만 확인하고 세부 요건은 후순위로 둔다.'], answer: 0, explanation: 'CPPG 문제에서는 조문의 적용 대상과 구체적인 요건을 사실관계에 맞춰 판단해야 합니다.' }
   ];
 }
 
 function formatArticleContent(article) {
-  let html = escapeHtml(article.content || '');
-  (article.highlights || []).filter(Boolean).forEach((highlight) => {
-    const safe = escapeHtml(highlight);
-    html = html.split(safe).join(`<strong class="article-highlight">${safe}</strong>`);
-  });
-  return html.replace(/\n/g, '<br>');
+  return escapeHtml(article.content || '').replace(/\n/g, '<br>');
+}
+
+function isLongArticle(article) {
+  return String(article.content || '').split(/\n/).filter((line) => line.trim()).length >= 20;
+}
+
+function mergeAnalysis(article, analysis = {}) {
+  const next = { ...article };
+  if (Number.isFinite(Number(analysis.importance))) next.importance = Math.max(1, Math.min(5, Number(analysis.importance)));
+  if (analysis.importanceReason) next.importanceReason = cleanArticleText(analysis.importanceReason);
+  if (analysis.summary && cleanArticleText(analysis.summary)) next.summary = cleanArticleText(analysis.summary);
+  if (Array.isArray(analysis.tags)) next.tags = analysis.tags.filter((tag) => String(tag).trim() && String(tag).trim() !== '현행법령').slice(0, 5);
+  return next;
+}
+
+function localArticleAnalysis(article) {
+  const text = `${article.title || ''} ${article.content || ''}`;
+  const lines = String(article.content || '').split('\n').map((line) => cleanArticleText(line)).filter(Boolean);
+  const summary = cleanArticleText(article.summary || lines[0] || '조문의 적용 대상과 요건을 확인한다.').slice(0, 90);
+  const tagRules = [['정의', '정의'], ['수집', '수집·이용'], ['이용', '수집·이용'], ['동의', '동의'], ['권리', '정보주체 권리'], ['민감', '민감정보'], ['고유식별', '고유식별정보'], ['안전', '안전성 확보'], ['보호위원회', '보호위원회']];
+  const tags = [...new Set(tagRules.filter(([word]) => text.includes(word)).map(([, tag]) => tag))].slice(0, 5);
+  return { importance: importanceScore(article), summary, tags };
+}
+
+function cleanArticleText(value = '') {
+  return String(value).replace(/^제\d+(?:의\d+)?조(?:\([^)]*\))?\s*/, '').trim();
 }
 
 function renderQuiz(questions) {
@@ -140,10 +165,12 @@ function sampleFreshArticles(items, count) {
   const previous = sessionStorage.getItem('cppg-today-article-ids') || '';
   let selected = weightedSample(items, count);
   for (let attempt = 0; attempt < 8 && selected.map((item) => item.id).sort().join(',') === previous; attempt += 1) selected = weightedSample(items, count);
+  const longArticle = selected.find(isLongArticle);
+  if (longArticle) selected = [longArticle];
   sessionStorage.setItem('cppg-today-article-ids', selected.map((item) => item.id).sort().join(','));
   return selected;
 }
-function importanceScore(article) { const tags = (article.tags || []).join(' '); return Math.min(5, Number(article.examWeight || 1) + (/정의|수집|이용|민감|고유|권리|안전/.test(tags) ? 2 : 0)); }
+function importanceScore(article) { const text = `${article.title || ''} ${article.content || ''} ${(article.tags || []).join(' ')}`; const hits = (text.match(/정의|수집|이용|동의|민감|고유식별|권리|안전|보호위원회|유출|통지/g) || []).length; return Math.min(5, Math.max(1, Number(article.examWeight || 1) + (hits >= 3 ? 2 : hits >= 1 ? 1 : 0))); }
 function shuffle(items) { return [...items].sort(() => Math.random() - .5); }
 function toggle(id, value) { $(id).disabled = value; }
 function assertOk(response) { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response; }
