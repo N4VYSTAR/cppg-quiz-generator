@@ -106,35 +106,37 @@ export default async function handler(req, res) {
 [오늘의 조문]
 ${normalized.map((article) => `제목: ${article.title}\n원문:\n${article.content}`).join('\n\n')}`;
 
-  try {
-    const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.65,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'ARRAY', items: { type: 'OBJECT', properties: {
-              question: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } },
-              answer: { type: 'INTEGER' }, explanation: { type: 'STRING' }
-            }, required: ['question', 'options', 'answer', 'explanation'] }
+  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.65,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'ARRAY', items: { type: 'OBJECT', properties: {
+                question: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } },
+                answer: { type: 'INTEGER' }, explanation: { type: 'STRING' }
+              }, required: ['question', 'options', 'answer', 'explanation'] }
+            }
           }
-        }
-      })
-    });
-    if (!response.ok) throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`);
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    const questions = JSON.parse(text || '[]');
-    if (!validateQuestions(questions, normalized)) throw new Error('AI 문제 품질 검증 실패');
-    return res.status(200).json({ questions: questions.slice(0, 3), source: 'ai' });
-  } catch (error) {
-    console.error(error);
-    return res.status(200).json({ questions: fallbackQuestions(normalized), source: 'fallback' });
+        })
+      });
+      if (!response.ok) throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`);
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const questions = JSON.parse(text || '[]');
+      if (!validateQuestions(questions, normalized)) throw new Error('AI 문제 품질 검증 실패');
+      return res.status(200).json({ questions: questions.slice(0, 3), source: 'ai' });
+    } catch (error) {
+      console.error(error);
+    }
   }
+  return res.status(200).json({ questions: fallbackQuestions(normalized), source: 'fallback' });
 }
 
 export { fallbackQuestions, validateQuestions };
