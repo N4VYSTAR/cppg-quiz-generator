@@ -27,15 +27,37 @@ function mutateStatement(statement, article) {
   return `${statement} 다만 조문에서 정한 별도의 요건은 확인하지 않는다.`;
 }
 
+function topicFromTitle(title = '') {
+  const match = String(title).match(/\(([^)]+)\)/);
+  return (match ? match[1] : title).trim() || '이 조문';
+}
+
+function pick(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function fallbackQuestions(articles) {
   const first = articles[0] || {};
   const title = first.title || '오늘의 조문';
+  const topic = topicFromTitle(title);
   const correct = (first.summary ? cleanArticleText(first.summary) : firstSubstantiveLine(first)).slice(0, 120);
   const wrong = mutateStatement(correct, first);
   const secondCorrect = '조문의 적용 대상과 구체적인 요건을 사실관계에 맞춰 확인해야 한다.';
+  const firstStems = [
+    `다음 중 ${topic}에 대한 설명으로 가장 옳은 것은?`,
+    `${topic}에 관한 내용으로 가장 적절한 것은?`,
+    `개인정보보호법상 ${topic}에 대한 설명으로 옳은 것은?`,
+    `다음 중 ${topic}의 내용에 부합하는 것은?`
+  ];
+  const secondStems = [
+    `${topic} 적용 시 가장 먼저 확인해야 할 사항으로 옳은 것은?`,
+    `${topic}과 관련하여 실무상 가장 적절한 판단은?`,
+    `${topic}의 취지에 비추어 가장 타당한 설명은?`,
+    `${topic} 판단 시 가장 적절한 기준은?`
+  ];
   return [
     {
-      question: `${title}의 내용으로 가장 정확한 것은?`,
+      question: pick(firstStems),
       options: [
         correct,
         wrong,
@@ -47,7 +69,7 @@ function fallbackQuestions(articles) {
       explanation: `정답은 제공된 조문 원문에 근거합니다. 핵심 내용은 ${correct}입니다.`
     },
     {
-      question: `${title}을(를) 적용할 때 가장 먼저 확인할 사항으로 옳은 것은?`,
+      question: pick(secondStems),
       options: [
         secondCorrect,
         '처리자의 내부 관행만으로 적용 여부를 결정한다.',
@@ -93,13 +115,20 @@ export default async function handler(req, res) {
 
   const prompt = `너는 CPPG(개인정보관리사) 개인정보보호법 과목의 문제 출제 전문가다. 아래 법령 조문만 근거로 실제 시험의 문체와 난이도를 참고한 새로운 예상문제 2~3개를 만들어라.
 
-문제는 다음 예시와 같은 자연스러운 법조문형 문장으로 작성하라.
-예시 형식: "다음 중 개인정보 처리방침에 필수적으로 포함되어야 할 내용으로 가장 정확하지 않은 것은?"
-사용할 수 있는 질문형은 "옳은 것은?", "옳지 않은 것은?", "가장 정확한 것은?", "가장 정확하지 않은 것은?", "적절하지 않은 것은?" 등이다.
+질문은 조문 제목이나 조 번호를 그대로 가져와 "제15조의 내용으로 가장 정확한 것은?"처럼 기계적으로 묻지 말고, 그 조문이 다루는 구체적 주제(예: 개인정보의 수집·이용 요건, 가명정보 처리 절차, 민감정보 예외 사유, 유출 통지 기한 등)를 문제 안에 자연스럽게 녹여서 실제 시험 문항처럼 작성하라.
+
+다음은 참고할 실제 CPPG 기출 문체 예시다. 이 문장을 그대로 베끼지 말고 구조와 어투만 참고하라.
+- "다음 중 개인정보보호법상 개인정보의 수집·이용 요건에 해당하지 않는 것은?"
+- "개인정보처리자가 민감정보를 처리할 수 있는 경우로 가장 적절한 것은?"
+- "개인정보 유출 시 정보주체에게 알려야 할 사항으로 옳지 않은 것은?"
+- "가명정보의 처리에 관한 설명으로 가장 옳은 것은?"
+- 사례형: 짧은 사실관계를 2~3문장 제시한 뒤 "위 사례에서 개인정보처리자가 준수해야 할 조치로 가장 적절한 것은?"처럼 묻는 방식
+
+사용할 수 있는 질문 어미는 "옳은 것은?", "옳지 않은 것은?", "가장 적절한 것은?", "가장 적절하지 않은 것은?", "해당하지 않는 것은?", "가장 정확한 것은?" 등이며, 한 번에 만드는 2~3문제 안에서 같은 질문형과 같은 문장 구조를 반복하지 말고 서로 다르게 섞어라.
 
 각 문제는 제공된 조문에서 확인할 수 있는 의무, 대상, 법적 근거, 처리 요건, 예외, 권리, 절차 또는 기간 중 하나를 묻는다. 선택지 5개는 모두 같은 주제의 자연스러운 법률 문장으로 만들고, 정답과 헷갈릴 수 있도록 요건 하나만 다르게 만든다. 조문 내용과 무관한 공부법이나 일반론을 묻지 않는다. 조문 제목, 조문 번호, "제15조(개인정보의 수집·이용)" 같은 원문 헤더를 선택지로 복사하지 않는다. 제공된 조문에 없는 숫자·기관·판례·예외는 만들지 않는다.
 
-문제의 근거가 부족한 경우 억지로 3개를 만들지 말고 2개만 만든다. 사례형 문제를 만들 때에는 조문에 있는 요건을 적용할 수 있는 짧은 사실관계만 추가하고, 사례의 정답에 필요한 정보가 모두 지문에 포함되게 한다.
+문제의 근거가 부족한 경우 억지로 3개를 만들지 말고 2개만 만든다. 가능하면 2~3문제 중 최소 하나는 짧은 사실관계를 제시하는 사례형으로 만들되, 조문에 있는 요건을 적용할 수 있는 사실관계만 추가하고 정답에 필요한 정보가 모두 지문에 포함되게 한다.
 
 반드시 JSON 배열만 반환하라. 각 객체는 question, options(문자열 5개), answer(0부터 시작하는 정답 번호), explanation 필드를 가진다. 해설에는 제공된 조문을 근거로 정답과 핵심 판단 기준을 간단히 설명하라.
 
