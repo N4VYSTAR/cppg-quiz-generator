@@ -19,7 +19,7 @@ Vercel 프로젝트 환경변수에 다음 값을 추가해야 실시간 동기�
 ```text
 LAW_API_OC=발급받은 국가법령정보센터 Open API 인증값
 GEMINI_API_KEY=Google Gemini API 키
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 `LAW_API_OC`가 없으면 저장된 `data.json`으로 동작하고 화면에 해당 상태를 표시합니다. `GEMINI_API_KEY`가 없거나 AI 호출에 실패하면 내부 가중치와 fallback 문제를 사용하므로 학습 화면이 빈 상태가 되지 않습니다. API 키는 브라우저 코드에 넣지 않고 서버리스 함수 환경변수에만 저장해야 합니다.

@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 JSON 배열만 반환하라.
 ${JSON.stringify(articles.map((a) => ({ id: a.id, title: a.title, content: a.content })))}`;
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', properties: { id: { type: 'INTEGER' }, importance: { type: 'INTEGER' }, importanceReason: { type: 'STRING' }, summary: { type: 'STRING' }, tags: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['id', 'importance', 'importanceReason', 'summary', 'tags'] } } } }) });
     if (!response.ok) throw new Error(`Gemini ${response.status}`);
     const data = await response.json(); const text = data.candidates?.[0]?.content?.parts?.[0]?.text; const result = JSON.parse(text || '[]');
