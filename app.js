@@ -105,8 +105,8 @@ function buildLocalQuestions() {
   const content = article.content || '조문 원문을 확인하세요.';
   const correct = cleanArticleText(article.summary || content.split('\n').find((line) => line.trim()) || '조문의 핵심 요건을 확인한다.').slice(0, 120);
   return [
-    { question: `${title}의 내용으로 가장 정확한 것은?`, options: [correct, '해당 요건은 적용 대상에 따라 별도로 검토할 필요가 없다.', '해당 요건은 일부 조건만 충족해도 같은 법적 효과가 발생한다.', '해당 요건은 사실관계보다 처리자의 내부 기준을 우선하여 판단한다.'], answer: 0, explanation: `정답은 제공된 조문 원문에 근거합니다. 핵심 내용은 ${correct}입니다.` },
-    { question: `${title}을(를) 적용할 때 가장 적절한 판단은?`, options: ['적용 대상과 조문에 정한 요건을 사실관계에 맞춰 함께 확인한다.', '적용 대상은 확인하되 조문에 정한 제한 요건은 별도로 확인하지 않는다.', '법적 근거는 확인하되 구체적인 처리 상황은 판단에서 제외한다.', '조문의 일반적인 취지만 확인하고 세부 요건은 후순위로 둔다.'], answer: 0, explanation: 'CPPG 문제에서는 조문의 적용 대상과 구체적인 요건을 사실관계에 맞춰 판단해야 합니다.' }
+    { question: `${title}의 내용으로 가장 정확한 것은?`, options: [correct, '해당 요건은 적용 대상에 따라 별도로 검토할 필요가 없다.', '해당 요건은 일부 조건만 충족해도 같은 법적 효과가 발생한다.', '해당 요건은 사실관계보다 처리자의 내부 기준을 우선하여 판단한다.', '해당 요건은 조문에 정한 예외와 관계없이 항상 동일하게 적용된다.'], answer: 0, explanation: `정답은 제공된 조문 원문에 근거합니다. 핵심 내용은 ${correct}입니다.` },
+    { question: `${title}을(를) 적용할 때 가장 적절한 판단은?`, options: ['적용 대상과 조문에 정한 요건을 사실관계에 맞춰 함께 확인한다.', '적용 대상은 확인하되 조문에 정한 제한 요건은 별도로 확인하지 않는다.', '법적 근거는 확인하되 구체적인 처리 상황은 판단에서 제외한다.', '조문의 일반적인 취지만 확인하고 세부 요건은 후순위로 둔다.', '조문에 정한 절차나 기간은 확인하지 않고 결과만 판단한다.'], answer: 0, explanation: 'CPPG 문제에서는 조문의 적용 대상과 구체적인 요건을 사실관계에 맞춰 판단해야 합니다.' }
   ];
 }
 
@@ -129,15 +129,26 @@ function mergeAnalysis(article, analysis = {}) {
 
 function localArticleAnalysis(article) {
   const text = `${article.title || ''} ${article.content || ''}`;
-  const lines = String(article.content || '').split('\n').map((line) => cleanArticleText(line)).filter(Boolean);
-  const summary = cleanArticleText(article.summary || lines[0] || '조문의 적용 대상과 요건을 확인한다.').slice(0, 90);
+  const lines = String(article.content || '').split('\n').map((line) => cleanArticleText(line).replace(/^[①-⑳]\s*/, '')).filter(Boolean);
+  const rawSummary = article.summary ? cleanArticleText(article.summary) : (lines[0] || '조문의 적용 대상과 요건을 확인한다.');
+  const summary = truncateSummary(rawSummary);
   const tagRules = [['정의', '정의'], ['수집', '수집·이용'], ['이용', '수집·이용'], ['동의', '동의'], ['권리', '정보주체 권리'], ['민감', '민감정보'], ['고유식별', '고유식별정보'], ['안전', '안전성 확보'], ['보호위원회', '보호위원회']];
   const tags = [...new Set(tagRules.filter(([word]) => text.includes(word)).map(([, tag]) => tag))].slice(0, 5);
   return { importance: importanceScore(article), summary, tags };
 }
 
 function cleanArticleText(value = '') {
-  return String(value).replace(/^제\d+(?:의\d+)?조(?:\([^)]*\))?\s*/, '').trim();
+  return String(value).replace(/^제\d+조(?:의\d+)?(?:\([^)]*\))?\s*/, '').trim();
+}
+
+function truncateSummary(value = '', maxLen = 90) {
+  const trimmed = String(value).trim();
+  if (trimmed.length <= maxLen) return trimmed;
+  const sentenceMatch = trimmed.slice(0, maxLen + 30).match(/^[\s\S]*?다\./);
+  if (sentenceMatch) return sentenceMatch[0];
+  const cut = trimmed.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${lastSpace > maxLen * 0.5 ? cut.slice(0, lastSpace) : cut}…`;
 }
 
 function renderQuiz(questions) {

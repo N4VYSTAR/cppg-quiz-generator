@@ -1,7 +1,7 @@
 function cleanArticleText(value = '') {
   return String(value)
-    .replace(/^제\d+(?:의\d+)?조(?:\([^)]*\))?\s*/, '')
-    .replace(/^\s*[①②③④⑤]\s*/, '')
+    .replace(/^제\d+조(?:의\d+)?(?:\([^)]*\))?\s*/, '')
+    .replace(/^\s*[①-⑳]\s*/, '')
     .trim();
 }
 
@@ -30,21 +30,31 @@ function mutateStatement(statement, article) {
 function fallbackQuestions(articles) {
   const first = articles[0] || {};
   const title = first.title || '오늘의 조문';
-  const content = first.content || '조문 원문을 확인하세요.';
   const correct = cleanArticleText(first.summary || firstSubstantiveLine(first)).slice(0, 120);
   const wrong = mutateStatement(correct, first);
   const secondCorrect = '조문의 적용 대상과 구체적인 요건을 사실관계에 맞춰 확인해야 한다.';
-  const secondWrong = '구체적인 사실관계와 관계없이 같은 결론을 적용한다.';
   return [
     {
       question: `${title}의 내용으로 가장 정확한 것은?`,
-      options: [correct, wrong, secondWrong, '조문에 정한 요건이 충족되지 않아도 동일한 법적 효과가 발생한다.'],
+      options: [
+        correct,
+        wrong,
+        '조문에 정한 요건이 충족되지 않아도 동일한 법적 효과가 발생한다.',
+        '해당 내용은 조문의 예외 규정과 관계없이 항상 동일하게 적용된다.',
+        '조문에서 정한 적용 대상이 아니어도 같은 의무가 발생한다.'
+      ],
       answer: 0,
       explanation: `정답은 제공된 조문 원문에 근거합니다. 핵심 내용은 ${correct}입니다.`
     },
     {
       question: `${title}을(를) 적용할 때 가장 먼저 확인할 사항으로 옳은 것은?`,
-      options: [secondCorrect, '처리자의 내부 관행만으로 적용 여부를 결정한다.', '조문의 일반적인 목적만 확인하고 본문에 정한 요건은 검토하지 않는다.', '구체적인 사실관계와 상관없이 같은 결론을 적용한다.'],
+      options: [
+        secondCorrect,
+        '처리자의 내부 관행만으로 적용 여부를 결정한다.',
+        '조문의 일반적인 목적만 확인하고 본문에 정한 요건은 검토하지 않는다.',
+        '구체적인 사실관계와 상관없이 같은 결론을 적용한다.',
+        '조문에 정한 절차나 기간은 확인하지 않고 결과만 판단한다.'
+      ],
       answer: 0,
       explanation: `조문은 제목이 아니라 적용 대상과 본문에 정한 요건을 사실관계에 맞춰 판단해야 합니다. 근거 조문: ${title}.`
     }
@@ -57,7 +67,7 @@ function hasBadMetaText(value) {
 
 function hasArticleHeader(value, articles = []) {
   const text = String(value || '').trim();
-  if (/^제\d+(?:의\d+)?조(?:\([^)]*\))?/.test(text)) return true;
+  if (/^제\d+조(?:의\d+)?(?:\([^)]*\))?/.test(text)) return true;
   return articles.some((article) => article.title && text.includes(String(article.title).trim()));
 }
 
@@ -65,9 +75,9 @@ function validateQuestions(questions, articles = []) {
   if (!Array.isArray(questions) || questions.length < 2 || questions.length > 3) return false;
   return questions.every((question) => {
     const options = question.options || [];
-    return typeof question.question === 'string' && options.length === 4 &&
-      Number.isInteger(question.answer) && question.answer >= 0 && question.answer < 4 &&
-      new Set(options.map((option) => String(option).trim())).size === 4 &&
+    return typeof question.question === 'string' && options.length === 5 &&
+      Number.isInteger(question.answer) && question.answer >= 0 && question.answer < 5 &&
+      new Set(options.map((option) => String(option).trim())).size === 5 &&
       !hasBadMetaText(question.question) && !hasBadMetaText(question.explanation) &&
       !options.some((option) => hasBadMetaText(option) || hasArticleHeader(option, articles));
   });
@@ -87,11 +97,11 @@ export default async function handler(req, res) {
 예시 형식: "다음 중 개인정보 처리방침에 필수적으로 포함되어야 할 내용으로 가장 정확하지 않은 것은?"
 사용할 수 있는 질문형은 "옳은 것은?", "옳지 않은 것은?", "가장 정확한 것은?", "가장 정확하지 않은 것은?", "적절하지 않은 것은?" 등이다.
 
-각 문제는 제공된 조문에서 확인할 수 있는 의무, 대상, 법적 근거, 처리 요건, 예외, 권리, 절차 또는 기간 중 하나를 묻는다. 선택지 4개는 모두 같은 주제의 자연스러운 법률 문장으로 만들고, 정답과 헷갈릴 수 있도록 요건 하나만 다르게 만든다. 조문 내용과 무관한 공부법이나 일반론을 묻지 않는다. 조문 제목, 조문 번호, "제15조(개인정보의 수집·이용)" 같은 원문 헤더를 선택지로 복사하지 않는다. 제공된 조문에 없는 숫자·기관·판례·예외는 만들지 않는다.
+각 문제는 제공된 조문에서 확인할 수 있는 의무, 대상, 법적 근거, 처리 요건, 예외, 권리, 절차 또는 기간 중 하나를 묻는다. 선택지 5개는 모두 같은 주제의 자연스러운 법률 문장으로 만들고, 정답과 헷갈릴 수 있도록 요건 하나만 다르게 만든다. 조문 내용과 무관한 공부법이나 일반론을 묻지 않는다. 조문 제목, 조문 번호, "제15조(개인정보의 수집·이용)" 같은 원문 헤더를 선택지로 복사하지 않는다. 제공된 조문에 없는 숫자·기관·판례·예외는 만들지 않는다.
 
 문제의 근거가 부족한 경우 억지로 3개를 만들지 말고 2개만 만든다. 사례형 문제를 만들 때에는 조문에 있는 요건을 적용할 수 있는 짧은 사실관계만 추가하고, 사례의 정답에 필요한 정보가 모두 지문에 포함되게 한다.
 
-반드시 JSON 배열만 반환하라. 각 객체는 question, options(문자열 4개), answer(0부터 시작하는 정답 번호), explanation 필드를 가진다. 해설에는 제공된 조문을 근거로 정답과 핵심 판단 기준을 간단히 설명하라.
+반드시 JSON 배열만 반환하라. 각 객체는 question, options(문자열 5개), answer(0부터 시작하는 정답 번호), explanation 필드를 가진다. 해설에는 제공된 조문을 근거로 정답과 핵심 판단 기준을 간단히 설명하라.
 
 [오늘의 조문]
 ${normalized.map((article) => `제목: ${article.title}\n원문:\n${article.content}`).join('\n\n')}`;

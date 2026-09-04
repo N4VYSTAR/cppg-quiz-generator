@@ -16,8 +16,20 @@ function scoreImportance(article) {
 
 function makeSummary(content = '') {
   const lines = String(content).split('\n').map((line) => line.trim()).filter(Boolean);
-  const summary = lines.map((line) => line.replace(/^제\d+(?:의\d+)?조(?:\([^)]*\))?\s*/, '').trim()).find(Boolean);
-  return (summary || '조문의 적용 대상과 핵심 요건을 확인한다.').slice(0, 90);
+  const summary = lines
+    .map((line) => line.replace(/^제\d+조(?:의\d+)?(?:\([^)]*\))?\s*/, '').replace(/^[①-⑳]\s*/, '').trim())
+    .find(Boolean);
+  return truncateSummary(summary || '조문의 적용 대상과 핵심 요건을 확인한다.');
+}
+
+function truncateSummary(value = '', maxLen = 90) {
+  const trimmed = String(value).trim();
+  if (trimmed.length <= maxLen) return trimmed;
+  const sentenceMatch = trimmed.slice(0, maxLen + 30).match(/^[\s\S]*?다\./);
+  if (sentenceMatch) return sentenceMatch[0];
+  const cut = trimmed.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${lastSpace > maxLen * 0.5 ? cut.slice(0, lastSpace) : cut}…`;
 }
 
 function makeTags(article) {
