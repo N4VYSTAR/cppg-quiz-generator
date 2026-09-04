@@ -107,10 +107,10 @@ export default async function handler(req, res) {
 ${normalized.map((article) => `제목: ${article.title}\n원문:\n${article.content}`).join('\n\n')}`;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -125,7 +125,7 @@ ${normalized.map((article) => `제목: ${article.title}\n원문:\n${article.cont
         }
       })
     });
-    if (!response.ok) throw new Error(`Gemini ${response.status}`);
+    if (!response.ok) throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`);
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     const questions = JSON.parse(text || '[]');
