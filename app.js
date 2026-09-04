@@ -95,7 +95,7 @@ function refreshCards() {
 
 function renderArticles(articles) {
   $('articleCount').textContent = `${articles.length}개`;
-  $('articles').innerHTML = articles.map((a) => `<article class="article-item"><div class="article-top"><div class="article-title">${escapeHtml(a.title)}</div>${a.importance >= 4 ? `<span class="importance" title="${escapeAttr(a.importanceReason || 'CPPG 출제 가능성 분석 결과')}">★ 시험 빈출 가능성 높음</span>` : ''}</div><div class="article-content">${formatArticleContent(a)}</div><div class="article-summary">한 줄 요약 · ${escapeHtml(cleanArticleText(a.summary || 'AI가 조문을 분석하는 중입니다.'))}</div><div class="tags">${(a.tags || []).filter((tag) => String(tag).trim() && String(tag).trim() !== '현행법령').slice(0, 5).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}</div></article>`).join('');
+  $('articles').innerHTML = articles.map((a) => `<article class="article-item"><div class="article-top"><div class="article-title">${escapeHtml(a.title)}</div>${a.importance >= 4 ? `<span class="importance" title="${escapeAttr(a.importanceReason || 'CPPG 출제 가능성 분석 결과')}">★ 시험 빈출 가능성 높음</span>` : ''}</div><div class="article-content">${formatArticleContent(a)}</div><div class="article-summary">해설 · ${escapeHtml(cleanArticleText(a.summary || 'AI가 조문을 분석하는 중입니다.'))}</div><div class="tags">${(a.tags || []).filter((tag) => String(tag).trim() && String(tag).trim() !== '현행법령').slice(0, 5).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}</div></article>`).join('');
   $('articles').querySelectorAll('.article-item').forEach((item) => item.addEventListener('click', () => { state.completed.article = true; updateProgress(); }));
 }
 
@@ -130,8 +130,7 @@ function mergeAnalysis(article, analysis = {}) {
 function localArticleAnalysis(article) {
   const text = `${article.title || ''} ${article.content || ''}`;
   const lines = String(article.content || '').split('\n').map((line) => cleanArticleText(line).replace(/^[①-⑳]\s*/, '')).filter(Boolean);
-  const rawSummary = article.summary ? cleanArticleText(article.summary) : (lines[0] || '조문의 적용 대상과 요건을 확인한다.');
-  const summary = truncateSummary(rawSummary);
+  const summary = article.summary ? cleanArticleText(article.summary) : (lines[0] || '조문의 적용 대상과 요건을 확인한다.');
   const tagRules = [['정의', '정의'], ['수집', '수집·이용'], ['이용', '수집·이용'], ['동의', '동의'], ['권리', '정보주체 권리'], ['민감', '민감정보'], ['고유식별', '고유식별정보'], ['안전', '안전성 확보'], ['보호위원회', '보호위원회']];
   const tags = [...new Set(tagRules.filter(([word]) => text.includes(word)).map(([, tag]) => tag))].slice(0, 5);
   return { importance: importanceScore(article), summary, tags };
@@ -139,16 +138,6 @@ function localArticleAnalysis(article) {
 
 function cleanArticleText(value = '') {
   return String(value).replace(/^제\d+조(?:의\d+)?(?:\([^)]*\))?\s*/, '').trim();
-}
-
-function truncateSummary(value = '', maxLen = 90) {
-  const trimmed = String(value).trim();
-  if (trimmed.length <= maxLen) return trimmed;
-  const sentenceMatch = trimmed.slice(0, maxLen + 30).match(/^[\s\S]*?다\./);
-  if (sentenceMatch) return sentenceMatch[0];
-  const cut = trimmed.slice(0, maxLen);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${lastSpace > maxLen * 0.5 ? cut.slice(0, lastSpace) : cut}…`;
 }
 
 function renderQuiz(questions) {

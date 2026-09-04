@@ -19,17 +19,7 @@ function makeSummary(content = '') {
   const summary = lines
     .map((line) => line.replace(/^제\d+조(?:의\d+)?(?:\([^)]*\))?\s*/, '').replace(/^[①-⑳]\s*/, '').trim())
     .find(Boolean);
-  return truncateSummary(summary || '조문의 적용 대상과 핵심 요건을 확인한다.');
-}
-
-function truncateSummary(value = '', maxLen = 90) {
-  const trimmed = String(value).trim();
-  if (trimmed.length <= maxLen) return trimmed;
-  const sentenceMatch = trimmed.slice(0, maxLen + 30).match(/^[\s\S]*?다\./);
-  if (sentenceMatch) return sentenceMatch[0];
-  const cut = trimmed.slice(0, maxLen);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${lastSpace > maxLen * 0.5 ? cut.slice(0, lastSpace) : cut}…`;
+  return summary || '조문의 적용 대상과 핵심 요건을 확인한다.';
 }
 
 function makeTags(article) {
@@ -50,7 +40,7 @@ export default async function handler(req, res) {
 - id: 입력 id
 - importance: CPPG 출제 가능성 1~5 정수. 정의, 개인정보 처리의 법적 근거, 정보주체 권리, 민감·고유식별정보, 안전성 확보, 유출 통지처럼 반복 출제되는 핵심 영역과 구체적 요건·예외가 많은 조문에 높은 점수를 부여
 - importanceReason: 왜 해당 조문이 CPPG에 중요한지 근거를 한 문장으로 작성
-- summary: 조문의 핵심 요건·대상·예외를 담은 정확한 한국어 한 줄 요약. '현행 법령 원문에서 가져온 조문입니다' 같은 문구는 금지
+- summary: 조문을 처음 보는 사람도 이해할 수 있도록 쉬운 말로 풀어 쓴 해설. 조문의 핵심 요건·대상·예외를 포함하되 한 문장에 억지로 욱여넣지 말고 필요하면 2~3문장으로 자연스럽게 설명하라. 글자 수를 줄이려고 문장을 자르지 말 것. '현행 법령 원문에서 가져온 조문입니다' 같은 문구는 금지
 - tags: 조문 내용과 직접 관련된 한국어 태그 2~5개. '현행법령'만 단독으로 반환하지 말 것
 
 JSON 배열만 반환하라.
@@ -67,5 +57,4 @@ ${JSON.stringify(articles.map((a) => ({ id: a.id, title: a.title, content: a.con
     }
   }
   return res.status(200).json({ articles: fallbackAnalysis(articles), source: 'weight' });
-  }
 }
