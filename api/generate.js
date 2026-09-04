@@ -30,7 +30,7 @@ function mutateStatement(statement, article) {
 function fallbackQuestions(articles) {
   const first = articles[0] || {};
   const title = first.title || '오늘의 조문';
-  const correct = cleanArticleText(first.summary || firstSubstantiveLine(first)).slice(0, 120);
+  const correct = (first.summary ? cleanArticleText(first.summary) : firstSubstantiveLine(first)).slice(0, 120);
   const wrong = mutateStatement(correct, first);
   const secondCorrect = '조문의 적용 대상과 구체적인 요건을 사실관계에 맞춰 확인해야 한다.';
   return [
